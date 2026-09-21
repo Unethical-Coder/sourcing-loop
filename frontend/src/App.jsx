@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef ,useState } from 'react';
 import { search, refine, rescore } from './api';
 import FilterPanel from './components/FilterPanel';
 import CandidateCard from './components/CandidateCard';
@@ -34,34 +34,48 @@ export default function App() {
   const [feedback, setFeedback] = useState('');
   const [pending, setPending] = useState('');
   const [dirty, setDirty] = useState(false);
+  const retryRef = useRef(null);
 
   const thinking = status === 'thinking';
   const frozen = status === 'frozen';
+  
+  const retryLastAction = () => {
+    if (!retryRef.current || thinking || frozen) return;
+    retryRef.current();
+  };
+
   const visibleCandidates = candidates.slice(0, DISPLAY_LIMIT);
 
   const snapshot = () => ({ query, filters, rubric: rubric.filter((r) => r.trim()) });
 
   const run = async (label, fallback, call) => {
-    setStatus('thinking');
-    setPending(label);
-    setError(null);
-    try {
-      const res = await call();
-      setQuery(res.state.query ?? query);
-      setFilters(res.state.filters);
-      setRubric(res.state.rubric);
-      setCandidates(res.candidates);
-      setTotal(res.total_matched);
-      setWarning(res.warning);
-      setDirty(false);
-      if (res.note) setMessages((m) => [...m, { role: 'assistant', text: res.note }]);
-      setStatus('active');
-    } catch (e) {
-      setError(e.message);
-      setStatus(fallback);
-    }
-  };
+  setStatus('thinking');
+  setPending(label);
+  setError(null);
 
+  retryRef.current = () => run(label, fallback, call);
+
+  try {
+    const res = await call();
+
+    setQuery(res.state.query ?? query);
+    setFilters(res.state.filters);
+    setRubric(res.state.rubric);
+    setCandidates(res.candidates);
+    setTotal(res.total_matched);
+    setWarning(res.warning);
+    setDirty(false);
+
+    if (res.note) {
+      setMessages((m) => [...m, { role: 'assistant', text: res.note }]);
+    }
+
+    setStatus('active');
+  } catch (e) {
+    setError(e.message);
+    setStatus(fallback);
+  }
+};
   const onSearch = (e) => {
     e.preventDefault();
     const q = query.trim();
@@ -138,7 +152,18 @@ export default function App() {
             className="mt-6 w-full resize-none rounded-xl border border-slate-300 bg-white p-4 text-base shadow-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
           />
           {error && (
-            <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700 ring-1 ring-rose-200">{error}</p>
+            <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-rose-50 px-3 py-2.5 text-sm text-rose-700 ring-1 ring-rose-200">
+                <p>{error}</p>
+
+                <button
+                type="button"
+                onClick={retryLastAction}
+                disabled={thinking}
+                className="shrink-0 rounded-md bg-rose-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                Try again
+                </button>
+            </div>
           )}
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <button
@@ -214,7 +239,21 @@ export default function App() {
             </div>
           )}
           {error && (
-            <div className="rounded-lg bg-rose-50 px-4 py-2.5 text-sm text-rose-700 ring-1 ring-rose-200">{error}</div>
+            <div className="flex items-center justify-between gap-4 rounded-lg bg-rose-50 px-4 py-2.5 text-sm text-rose-700 ring-1 ring-rose-200">
+                <div>
+                <p className="font-medium">We couldn't complete that search.</p>
+                <p className="mt-0.5">{error}</p>
+                </div>
+
+                <button
+                type="button"
+                onClick={retryLastAction}
+                disabled={thinking || frozen}
+                className="shrink-0 rounded-md bg-rose-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                Try again
+                </button>
+            </div>
           )}
           {warning && !thinking && total !== 0 &&(
             <div className="rounded-lg bg-amber-50 px-4 py-2.5 text-sm text-amber-800 ring-1 ring-amber-200">{warning}</div>
