@@ -94,6 +94,11 @@ export default function App() {
     setDirty(true);
   };
 
+  const clearFilters = () => {
+    setFilters(EMPTY_FILTERS);
+    setDirty(true);
+  };
+
   const exportJson = () => {
     const out = {
       ...snapshot(),
@@ -211,7 +216,7 @@ export default function App() {
           {error && (
             <div className="rounded-lg bg-rose-50 px-4 py-2.5 text-sm text-rose-700 ring-1 ring-rose-200">{error}</div>
           )}
-          {warning && !thinking && (
+          {warning && !thinking && total !== 0 &&(
             <div className="rounded-lg bg-amber-50 px-4 py-2.5 text-sm text-amber-800 ring-1 ring-amber-200">{warning}</div>
           )}
           {frozen && (
@@ -222,11 +227,11 @@ export default function App() {
 
           {!thinking && candidates.length > 0 && (
             <p className="text-sm text-slate-500">
-              {total} profiles pass the filters
-              {candidates.length < total && ` · showing the top ${DISPLAY_LIMIT}`}
+                {total} profiles pass the filters
+                {candidates.length > DISPLAY_LIMIT &&
+                ` · showing the top ${DISPLAY_LIMIT}`}
             </p>
           )}
-
           {thinking
             ? Array.from({ length: DISPLAY_LIMIT }, (_, i) => i).map((i) => (
                 <div key={i} className="animate-pulse rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -248,9 +253,32 @@ export default function App() {
                 <CandidateCard key={c.profile.id} rank={i + 1} candidate={c} />
             ))}
 
-          {!thinking && candidates.length === 0 && !warning && (
-            <p className="py-16 text-center text-slate-400">No candidates yet.</p>
-          )}
+            {!thinking && candidates.length === 0 && total === 0 && !error && (
+            <div className="rounded-xl border border-slate-200 bg-white px-6 py-12 text-center shadow-sm">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-500">
+                0
+                </div>
+
+                <h2 className="mt-4 text-base font-semibold text-slate-900">
+                No candidates match these filters
+                </h2>
+
+                <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-500">
+                Try widening the experience range, removing a required skill, or changing
+                the location. You can also clear the filters and run the search again.
+                </p>
+
+                {!frozen && (
+                <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="mt-5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                >
+                    Clear filters
+                </button>
+                )}
+            </div>
+            )}
         </section>
       </main>
 
