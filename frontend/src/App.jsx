@@ -176,12 +176,14 @@ export default function App() {
               </button>
             )}
             {status === 'active' && (
-              <button
+            <button
                 onClick={() => setStatus('frozen')}
-                className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
-              >
-                Freeze search
-              </button>
+                disabled={dirty}
+                title={dirty ? 'Re-run with your edits before freezing the search' : 'Freeze this search'}
+                className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+                {dirty ? 'Re-run before freezing' : 'Freeze search'}
+            </button>
             )}
           </div>
         </div>
