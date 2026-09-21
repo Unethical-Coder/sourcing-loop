@@ -6,6 +6,8 @@ import ChatBar from './components/ChatBar';
 
 const EMPTY_FILTERS = { skills: [], min_experience: null, max_experience: null, locations: [], company_types: [] };
 
+const DISPLAY_LIMIT = 5;
+
 const EXAMPLES = [
   'RDS developers with 4-7 years of experience who worked at startups in Bangalore',
   'Backend engineers with Kafka experience, 5+ years, at product companies',
@@ -35,6 +37,7 @@ export default function App() {
 
   const thinking = status === 'thinking';
   const frozen = status === 'frozen';
+  const visibleCandidates = candidates.slice(0, DISPLAY_LIMIT);
 
   const snapshot = () => ({ query, filters, rubric: rubric.filter((r) => r.trim()) });
 
@@ -76,7 +79,7 @@ export default function App() {
     if (!text || thinking || frozen) return;
     setMessages((m) => [...m, { role: 'user', text }]);
     setFeedback('');
-    run('Applying your feedback…', 'active', () => refine(text, snapshot(), candidates));
+    run('Applying your feedback…', 'active', () => refine(text, snapshot(), visibleCandidates));
   };
 
   const onRerun = () => run('Re-scoring with your edits…', 'active', () => rescore(snapshot()));
@@ -94,7 +97,7 @@ export default function App() {
   const exportJson = () => {
     const out = {
       ...snapshot(),
-      candidates: candidates.map((c) => ({
+      candidates: visibleCandidates.map((c) => ({
         id: c.profile.id,
         name: c.profile.name,
         score: c.evaluation.score,
@@ -218,12 +221,12 @@ export default function App() {
           {!thinking && candidates.length > 0 && (
             <p className="text-sm text-slate-500">
               {total} profiles pass the filters
-              {candidates.length < total && ` · scoring the first ${candidates.length}, tighten the filters to see others`}
+              {candidates.length < total && ` · showing the top ${DISPLAY_LIMIT}`}
             </p>
           )}
 
           {thinking
-            ? [0, 1, 2, 3].map((i) => (
+            ? Array.from({ length: DISPLAY_LIMIT }, (_, i) => i).map((i) => (
                 <div key={i} className="animate-pulse rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                   <div className="flex gap-4">
                     <div className="h-9 w-9 rounded-full bg-slate-200" />
@@ -239,7 +242,9 @@ export default function App() {
                   </div>
                 </div>
               ))
-            : candidates.map((c, i) => <CandidateCard key={c.profile.id} rank={i + 1} candidate={c} />)}
+            : visibleCandidates.map((c, i) => (
+                <CandidateCard key={c.profile.id} rank={i + 1} candidate={c} />
+            ))}
 
           {!thinking && candidates.length === 0 && !warning && (
             <p className="py-16 text-center text-slate-400">No candidates yet.</p>
